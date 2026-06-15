@@ -1,5 +1,6 @@
 from pathlib import Path
 
+DEBUG = True
 
 class EXTENSIONS:
     """
@@ -7,6 +8,8 @@ class EXTENSIONS:
     """
     mid = ".mid"
     wav = ".wav"
+    txt = ".txt"
+    json = ".json"
 
     @staticmethod
     def get_extensions_fields():
@@ -29,10 +32,13 @@ class AVAILABLE_INSTRUMENTS_FOR_TABS:
                 if not callable(value) and not name.startswith("__")]
 
 
+BASE_DIR = Path(__file__).parent.parent
+
+DEBUG_TABS_SAVE_DIR_PATH = BASE_DIR / "debug_tabs"
+
 DEFAULT_MIDI_DIR = "midi/"
 
 DEMUCS_OUTPUT_DIR = "demucs/"
-BASE_DIR = Path(__file__).parent.parent
 VENV_PATH = BASE_DIR / ".venv" / "Scripts" / "python.exe"
 DEFAULT_NOTES_OUTPUT_DIR_PATH = BASE_DIR / "tabs"
 DEFAULT_NOTES_OUTPUT_FILENAME = "{0}_notes.json"

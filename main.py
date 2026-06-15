@@ -9,7 +9,8 @@ import soundfile
 import librosa
 from basic_pitch.inference import predict_and_save
 from basic_pitch import ICASSP_2022_MODEL_PATH
-from notesgenerator import NotesGenerator, MidiFile
+from notesgenerator import NotesGenerator, MidiFile, TabDrawer
+import torch
 
 
 def load_tools():
@@ -38,7 +39,7 @@ def get_args():
 def separate_guitars(path_to_dir_with_separation : Path):
     """
     Разделение гитарных партий
-    (lead и rythm)
+    (lead и rhythm)
     :param path_to_dir_with_separation: Путь к папке, где лежат
     разделенные партии.
     :return: Пути к файлам лид и ритм гитар.
@@ -78,12 +79,23 @@ def separate_audio(filename : Path):
     input_path = str(filename)
     output_path = str(config.BASE_DIR / config.DEMUCS_OUTPUT_DIR)
 
-    result = subprocess.run(
-        [str(config.VENV_PATH), "-m",
-         "demucs", input_path,
-         "-o", output_path],
-        capture_output=True
-    )
+    if torch.cuda.is_available():
+        print("CUDA ENABLED")
+        result = subprocess.run(
+            [str(config.VENV_PATH), "-m",
+             "demucs", input_path,
+             "--device", "cuda",
+             "-o", output_path],
+            capture_output=True
+        )
+    else:
+        print("CUDA DISABLED")
+        result = subprocess.run(
+            [str(config.VENV_PATH), "-m",
+             "demucs", input_path,
+             "-o", output_path],
+            capture_output=True
+        )
 
     separated_dir_path = config.BASE_DIR / config.DEMUCS_OUTPUT_DIR / "htdemucs" / Path(filename).stem
     print("Separating lead and rhythm guitars...")
@@ -158,8 +170,31 @@ def main():
     print("Dumping notes into json...")
     dump_notes_into_json(generated_notes, filename.stem)
 
+    if config.DEBUG:
+        print("Rendering and saving tabs...")
+        save_tabs_into_files(generated_notes, filename.stem)
+
     print("Removing separated directory")
     delete_directory(dir_with_separation)
+
+
+def save_tabs_into_files(generated_notes : list, song_name : str):
+    """
+    DEBUG-функция сохранения текстовых табулатур в файл.
+    :param generated_notes: Набор сгенерированных нот для всех инструментов.
+    :param song_name: Название песни, по которой создается папка с табулатурами.
+    :return: None
+    """
+    save_dir_path = config.DEBUG_TABS_SAVE_DIR_PATH / song_name
+    save_dir_path.mkdir(exist_ok=True, parents=True)
+    for notes in generated_notes:
+        instrument_type = notes[1]
+        instrument_notes = notes[0]
+
+        save_path = save_dir_path / (instrument_type + config.EXTENSIONS.txt)
+        tabs = TabDrawer.create_tab(instrument_type, instrument_notes)
+        with open(save_path, "w") as file:
+            file.write(tabs)
 
 
 def dump_notes_into_json(notes : list, song_name : str):

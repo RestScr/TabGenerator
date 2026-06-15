@@ -1,1 +1,1 @@
-from notesgenerator.lib import NotesGenerator, MidiFile
+from notesgenerator.lib import NotesGenerator, MidiFile, TabDrawer
