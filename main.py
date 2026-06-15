@@ -11,6 +11,8 @@ from basic_pitch.inference import predict_and_save
 from basic_pitch import ICASSP_2022_MODEL_PATH
 from notesgenerator import NotesGenerator, MidiFile, TabDrawer
 import torch
+from notesgenerator.web import post_json, check_url
+from http import HTTPStatus
 
 
 def load_tools():
@@ -31,7 +33,9 @@ def get_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("filename", help="Path to audio file")
-    parser.add_argument("--output", help="Path to output folder")
+    parser.add_argument("--output", "--o", help="Path to output folder")
+    parser.add_argument("--url", "--u", help="Url to post data")
+    parser.add_argument("--apikey", "--ak",  help="Api key for access") # ВРЕМЕННО НЕ ИСПОЛЬЗУЕТСЯ
 
     return parser.parse_args()
 
@@ -118,6 +122,7 @@ def convert_audio_to_midi(filename_path : Path):
         output_directory=path_to_midi,
         save_midi=True,
         sonify_midi=True,
+
         save_model_outputs=False,
         save_notes=False,
         model_or_model_path=ICASSP_2022_MODEL_PATH
@@ -137,12 +142,19 @@ def main():
     args = get_args()
 
     if args.output is not None:
-        config.output_path = args.output
+        config.DEFAULT_NOTES_OUTPUT_DIR_PATH = Path(args.output)
+
+    if args.url is not None:
+        if not check_url(args.url):
+            print(f"Url \"{args.url}\" is not found")
+        else:
+            config.NOTES_POST_URL = args.url
 
     print("Starting script")
     filename = Path(args.filename)
     dir_with_separation = separate_audio(filename)
 
+    # Генерация и получение имен сгенерированных MIDI-файлов
     print("Creating MIDI-files...")
     midi_files = []
     for item in config.AVAILABLE_INSTRUMENTS_FOR_TABS.get_available_instruments_for_tabs_fields():
@@ -150,35 +162,44 @@ def main():
         midi_file = available_instrument_attribute + config.EXTENSIONS.wav
         path_to_file = dir_with_separation / midi_file
 
+        # Сама конвертация
         path_to_midi = convert_audio_to_midi(path_to_file)
         midi_files.append(
             MidiFile(available_instrument_attribute,
                      path_to_midi)
         )
 
-    generated_notes = []
+    generated_notes = {}
 
     print("Creating tab notes...")
     for midi_file in midi_files:
-        generated_notes.append(
-            (
-                NotesGenerator.create_notes(midi_file),
-                midi_file.instrument_type
-             )
+        generated_notes.setdefault(
+            midi_file.instrument_type,
+            NotesGenerator.create_notes(midi_file)
         )
 
     print("Dumping notes into json...")
     dump_notes_into_json(generated_notes, filename.stem)
 
+    if config.NOTES_POST_URL is not None:
+        print(f"Sending output to \"{config.NOTES_POST_URL}\"...")
+        result = post_json(config.NOTES_POST_URL, generated_notes)
+        if result == HTTPStatus.OK:
+            print("Success!")
+        else:
+            print("Failed. Status code:", result)
+
+    # Для отладки.
     if config.DEBUG:
         print("Rendering and saving tabs...")
         save_tabs_into_files(generated_notes, filename.stem)
 
+    # Удаление временной директории
     print("Removing separated directory")
     delete_directory(dir_with_separation)
 
 
-def save_tabs_into_files(generated_notes : list, song_name : str):
+def save_tabs_into_files(generated_notes : dict, song_name : str):
     """
     DEBUG-функция сохранения текстовых табулатур в файл.
     :param generated_notes: Набор сгенерированных нот для всех инструментов.
@@ -187,17 +208,21 @@ def save_tabs_into_files(generated_notes : list, song_name : str):
     """
     save_dir_path = config.DEBUG_TABS_SAVE_DIR_PATH / song_name
     save_dir_path.mkdir(exist_ok=True, parents=True)
-    for notes in generated_notes:
-        instrument_type = notes[1]
-        instrument_notes = notes[0]
 
+    for instrument_type, instrument_notes in generated_notes.items():
         save_path = save_dir_path / (instrument_type + config.EXTENSIONS.txt)
         tabs = TabDrawer.create_tab(instrument_type, instrument_notes)
         with open(save_path, "w") as file:
             file.write(tabs)
 
 
-def dump_notes_into_json(notes : list, song_name : str):
+def dump_notes_into_json(notes : dict, song_name : str):
+    """
+    Сохранить ноты в JSON-файл.
+    :param notes: Словарь с нотами.
+    :param song_name: Название песни, под которым будет сохраняться JSON-файл.
+    :return: None
+    """
     save_path = (config.DEFAULT_NOTES_OUTPUT_DIR_PATH
                  / config.DEFAULT_NOTES_OUTPUT_FILENAME.format(song_name))
     save_path.parent.mkdir(exist_ok=True, parents=True)
@@ -207,10 +232,16 @@ def dump_notes_into_json(notes : list, song_name : str):
 
 
 def delete_directory(directory_path : Path):
+    """
+    Удаление директории и ее поддиректорий
+    :param directory_path: Путь к директории
+    :return: None
+    """
     assert directory_path.is_dir()
     shutil.rmtree(directory_path)
 
 
+# Точка входа
 if __name__ == "__main__":
     load_tools()
     main()

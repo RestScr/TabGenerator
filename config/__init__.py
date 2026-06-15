@@ -42,3 +42,5 @@ DEMUCS_OUTPUT_DIR = "demucs/"
 VENV_PATH = BASE_DIR / ".venv" / "Scripts" / "python.exe"
 DEFAULT_NOTES_OUTPUT_DIR_PATH = BASE_DIR / "tabs"
 DEFAULT_NOTES_OUTPUT_FILENAME = "{0}_notes.json"
+
+NOTES_POST_URL = None
