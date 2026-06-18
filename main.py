@@ -7,9 +7,14 @@ import config
 import subprocess
 import soundfile
 import librosa
-from basic_pitch.inference import predict_and_save
-from basic_pitch import ICASSP_2022_MODEL_PATH
-from notesgenerator import NotesGenerator, MidiFile, TabDrawer
+from notesgenerator import (
+    NotesGenerator,
+    MidiFile,
+    TabDrawer,
+    MidiConverter,
+    BPMMap,
+    assert_filename
+)
 import torch
 from notesgenerator.web import post_json, check_url
 from http import HTTPStatus
@@ -73,12 +78,7 @@ def separate_audio(filename : Path):
     :param filename: Путь к аудио файлу для разделения.
     :return: Путь к папке с разделенными партиями.
     """
-    if not filename.is_absolute():
-        filename = config.BASE_DIR / filename
-
-    assert filename.is_file()
-    assert os.path.exists(filename)
-    print("Separating audio...")
+    filename = assert_filename(filename)
 
     input_path = str(filename)
     output_path = str(config.BASE_DIR / config.DEMUCS_OUTPUT_DIR)
@@ -108,32 +108,6 @@ def separate_audio(filename : Path):
     return separated_dir_path
 
 
-def convert_audio_to_midi(filename_path : Path):
-    """
-    Функция конвертации аудио файла в MIDI-файл.
-    :param filename_path: Путь к файлу.
-    :return: Результирующий путь к MIDI-файлу.
-    """
-    path_to_midi = Path(filename_path).parent / config.DEFAULT_MIDI_DIR
-    path_to_midi.mkdir(exist_ok=True)
-
-    predict_and_save(
-        audio_path_list=[str(filename_path)],
-        output_directory=path_to_midi,
-        save_midi=True,
-        sonify_midi=True,
-
-        save_model_outputs=False,
-        save_notes=False,
-        model_or_model_path=ICASSP_2022_MODEL_PATH
-    )
-
-    midi_filename = Path(filename_path).stem + "_basic_pitch" + config.EXTENSIONS.mid
-    result_path = path_to_midi / midi_filename
-
-    return result_path
-
-
 def main():
     """
     Точка входа в скрипт.
@@ -152,6 +126,14 @@ def main():
 
     print("Starting script")
     filename = Path(args.filename)
+
+    print("Getting BPM Map...")
+    bpm_map = BPMMap(filename)
+
+    if config.DEBUG:
+        print("BPM Map:", bpm_map)
+
+    print("Separating audio...")
     dir_with_separation = separate_audio(filename)
 
     # Генерация и получение имен сгенерированных MIDI-файлов
@@ -163,17 +145,20 @@ def main():
         path_to_file = dir_with_separation / midi_file
 
         # Сама конвертация
-        path_to_midi = convert_audio_to_midi(path_to_file)
+        path_to_midi = MidiConverter.convert_audio_to_midi(path_to_file, bpm_map=bpm_map)
         midi_files.append(
             MidiFile(available_instrument_attribute,
                      path_to_midi)
         )
 
-    generated_notes = {}
+    generated_notes = {
+        "bpm_map" : list(bpm_map),
+        "instrument_notes" : {}
+    }
 
     print("Creating tab notes...")
     for midi_file in midi_files:
-        generated_notes.setdefault(
+        generated_notes["instrument_notes"].setdefault(
             midi_file.instrument_type,
             NotesGenerator.create_notes(midi_file)
         )
@@ -192,11 +177,11 @@ def main():
     # Для отладки.
     if config.DEBUG:
         print("Rendering and saving tabs...")
-        save_tabs_into_files(generated_notes, filename.stem)
+        save_tabs_into_files(generated_notes["instrument_notes"], filename.stem)
 
     # Удаление временной директории
     print("Removing separated directory")
-    delete_directory(dir_with_separation)
+    #delete_directory(dir_with_separation)
 
 
 def save_tabs_into_files(generated_notes : dict, song_name : str):

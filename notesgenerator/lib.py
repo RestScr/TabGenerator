@@ -1,6 +1,13 @@
+from torchgen.api.cpp import return_names
+
 import config
 import pretty_midi
 from pathlib import Path
+import os
+import librosa
+import math
+from basic_pitch.inference import predict_and_save
+from basic_pitch import ICASSP_2022_MODEL_PATH
 
 
 class MidiFile:
@@ -14,7 +21,7 @@ class MidiFile:
 
 class NotesGenerator:
     """
-    Синглтон-фабрика табулатур.
+    Синглтон-фабрика генерации нот для табулатур.
     """
     _instance = None
     GUITAR_STRINGS_PITCH = [40, 45, 50, 55, 59, 64]
@@ -68,9 +75,6 @@ class NotesGenerator:
             ]
             for note in instrument.notes:
                 pitch = note.pitch # тональность ноты
-
-                best_string = None
-                best_fret = None
 
                 possible_positions = [] # Массив возможных позиций на грифе
                 for i, open_note in enumerate(cls.GUITAR_STRINGS_PITCH):
@@ -178,11 +182,97 @@ class TabDrawer:
         return "\n".join(out)
 
 
+class BPMPart:
+    """
+    Структура, хранящая информацию об участке песни:
+    начало участка (сек), конец участка (сек), темп.
+    """
+    def __init__(self, start : float, end : float, tempo : int):
+        self.start = start
+        self.end = end
+        self.tempo = tempo
+
+    def __iter__(self):
+        return iter([self.start, self.end, self.tempo])
+
+
+class BPMMap:
+    """
+    Класс, хранящий информацию
+    об участках песни с различным темпом.
+    """
+    WINDOW_SIZE = 5 # Размер тактового окна при получении карты
+                     # темпов в секундах
+    def __init__(self, filename : Path):
+        self.bpm_map = None
+        self.rate_local(filename)
+
+    def rate_local(self, filename : Path) -> None:
+        """
+        Функция получения темпа на каждом временном кадре песни в аудиофайле.
+        :param filename: Путь к файлу.
+        :return: None.
+        """
+        filename = assert_filename(filename)
+        y, sample_rate = librosa.load(filename)
+
+        window_size = BPMMap.WINDOW_SIZE
+
+        bpm_map = []
+        for start in range(0, int(len(y) / sample_rate), window_size):
+            end = start + window_size
+            y_segment = y[start*sample_rate:(start + window_size)*sample_rate]
+
+            tempo, _ = librosa.beat.beat_track(y=y_segment, sr=sample_rate)
+            if type(tempo) != float:
+                tempo = tempo[0]
+            tempo = math.ceil(tempo)
+            if tempo > 0:
+                bpm_map.append(BPMPart(start, end, tempo))
+
+        # Досчитываем последний кусок песни
+        # (он мог не попасть в окно)
+        start, end = int(len(y) / sample_rate) // window_size * window_size, len(y) / sample_rate
+        y_segment = y[start * sample_rate:(start + window_size) * sample_rate]
+        tempo = math.ceil(librosa.beat.beat_track(y=y_segment, sr=sample_rate)[0])
+        if tempo == 0:
+            tempo = 1
+        bpm_map.append(BPMPart(start, end, tempo))
+
+        self.bpm_map = bpm_map
+
+
+    def rate(self, filename : Path):
+        """
+        Функция получения общего темпа песни.
+        :param filename: Путь к песне.
+        :return: None
+        """
+        filename = assert_filename(filename)
+        y, sample_rate = librosa.load(filename)
+
+        onset_environment = librosa.onset.onset_strength(y=y, sr=sample_rate)
+
+        global_tempo = librosa.feature.tempo(
+            onset_envelope=onset_environment,
+            sr=sample_rate
+        )
+
+        self.bpm_map = [BPMPart(0, len(y) / sample_rate, math.ceil(global_tempo[0]))]
+
+    def __iter__(self):
+        return iter([tuple(part) for part in self.bpm_map])
+
+
 class MidiConverter:
     """
     Отдельно вынесенный класс конвертера аудио в MIDI_формат
     """
     _instance = None
+
+    NOTE_DURATION_EPS = 0.2
+    EPS = 0.1 # Погрешность для нот при очистке MIDI-файлов
+    PITCH_EPS = 1 # Погрешность разности MIDI-нот
 
     def __new__(cls):
         if cls._instance is not None:
@@ -196,4 +286,106 @@ class MidiConverter:
             cls.__init__(cls._instance)
 
         return cls._instance
+
+    @classmethod
+    def __quantize(cls, path_to_midi : Path, bpm_map : BPMMap) -> None:
+        """
+        Функция, осуществляющая квантизацию MIDI-файла.
+        :param path_to_midi: Путь к MIDI-файлу
+        :return: None
+        """
+        midi = pretty_midi.PrettyMIDI(path_to_midi)
+
+        bpm_map_iterator = iter(bpm_map.bpm_map)
+        current_window = next(bpm_map_iterator)
+
+        for instrument in midi.instruments:
+            for note in instrument.notes:
+                if note.start >= current_window.end:
+                    # Если нота выходит за рамки текущего окна, переходим
+                    # к следующему окну
+                    current_window = next(bpm_map_iterator)
+
+                step = 60 / current_window.tempo / 4
+                note.start = round(note.start / step) * step
+                note.end = round(note.end / step) * step
+
+        # Очистка MIDI от артефактов
+        midi = cls.__clean_midi(midi)
+
+        # Сохранение нового MIDI
+        midi.write(path_to_midi)
+
+    @classmethod
+    def __clean_midi(cls, midi : pretty_midi.PrettyMIDI) -> pretty_midi.PrettyMIDI:
+        """
+        Функция, которая занимается очисткой
+        сгенерированных MIDI-файлов.
+        :param midi: Объект открытого MIDI-файла.
+        :return: Ссылка на очищенный MIDI-объект
+        """
+        for i in range(len(midi.instruments)):
+            prettified_notes = midi.instruments[i].notes.copy()
+            for j in range(1, len(midi.instruments[i].notes)):
+                previous_note = midi.instruments[i].notes[j - 1]
+                current_note = midi.instruments[i].notes[j]
+                if abs(previous_note.end - current_note.start) <= cls.EPS\
+                        and abs(previous_note.pitch - current_note.pitch) <= cls.PITCH_EPS:
+                    if prettified_notes[j - 1] is not None:
+                        prettified_notes[j - 1].end = current_note.end
+                    prettified_notes[j] = None
+                if abs(current_note.start - current_note.end) <= cls.NOTE_DURATION_EPS:
+                    prettified_notes[j] = None
+
+            prettified_notes = [note for note in prettified_notes if note is not None]
+            midi.instruments[i].notes = prettified_notes
+
+        return midi
+
+
+    @classmethod
+    def convert_audio_to_midi(cls, filename_path : Path, bpm_map : BPMMap) -> Path:
+        """
+        Функция конвертации аудио файла в MIDI-файл.
+        :param filename_path: Путь к файлу.
+        :param bpm_map: Карта темпов песни.
+        :return: Результирующий путь к MIDI-файлу.
+        """
+        path_to_midi = Path(filename_path).parent / config.DEFAULT_MIDI_DIR
+        path_to_midi.mkdir(exist_ok=True)
+
+        predict_and_save(
+            audio_path_list=[str(filename_path)],
+            output_directory=path_to_midi,
+            save_midi=True,
+            sonify_midi=True,
+
+            save_model_outputs=False,
+            save_notes=False,
+            model_or_model_path=ICASSP_2022_MODEL_PATH
+        )
+
+        midi_filename = Path(filename_path).stem + "_basic_pitch" + config.EXTENSIONS.mid
+        result_path = path_to_midi / midi_filename
+
+        # Квантизация (распределение равномерного темпа по всей песне)
+        cls.__quantize(result_path, bpm_map)
+
+        return result_path
+
+
+def assert_filename(filename : Path) -> Path:
+    """
+    Функция проверки пути к файлу на:
+    1. Путь ведет точно к файлу.
+    2. Файл существует.
+    :return: Возвращает полный путь к файлу
+    """
+    if not filename.is_absolute():
+        filename = config.BASE_DIR / filename
+
+    assert filename.is_file()
+    assert os.path.exists(filename)
+
+    return filename
 
