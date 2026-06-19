@@ -270,9 +270,10 @@ class MidiConverter:
     """
     _instance = None
 
-    NOTE_DURATION_EPS = 0.2
-    EPS = 0.1 # Погрешность для нот при очистке MIDI-файлов
-    PITCH_EPS = 1 # Погрешность разности MIDI-нот
+    NOTE_DURATION_EPS = 0.05 # Минимальная допустимая длительность нот
+    DISTANCE_EPS = 0.1 # Погрешность расстояния между нотами при очистке MIDI-файлов
+    PITCH_EPS = 0 # Погрешность разности MIDI-нот
+    MINIMAL_VELOCITY = 5 # Минимальная допустимая громкость нот
 
     def __new__(cls):
         if cls._instance is not None:
@@ -312,9 +313,10 @@ class MidiConverter:
 
         # Очистка MIDI от артефактов
         midi = cls.__clean_midi(midi)
-
-        # Сохранение нового MIDI
         midi.write(path_to_midi)
+
+        # Разделение MIDI на партии
+        cls.__split_midi(midi, path_to_midi.parent, path_to_midi.stem)
 
     @classmethod
     def __clean_midi(cls, midi : pretty_midi.PrettyMIDI) -> pretty_midi.PrettyMIDI:
@@ -329,18 +331,76 @@ class MidiConverter:
             for j in range(1, len(midi.instruments[i].notes)):
                 previous_note = midi.instruments[i].notes[j - 1]
                 current_note = midi.instruments[i].notes[j]
-                if abs(previous_note.end - current_note.start) <= cls.EPS\
-                        and abs(previous_note.pitch - current_note.pitch) <= cls.PITCH_EPS:
+
+                current_note_duration = abs(current_note.end - current_note.start)
+                notes_distance = abs(previous_note.end - current_note.start)
+                pitch_delta = abs(previous_note.pitch - current_note.pitch)
+
+                if notes_distance <= cls.DISTANCE_EPS and pitch_delta <= cls.PITCH_EPS:
                     if prettified_notes[j - 1] is not None:
                         prettified_notes[j - 1].end = current_note.end
+                        prettified_notes[j] = None
+
+                if current_note_duration <= cls.NOTE_DURATION_EPS:
                     prettified_notes[j] = None
-                if abs(current_note.start - current_note.end) <= cls.NOTE_DURATION_EPS:
+                if current_note.velocity < cls.MINIMAL_VELOCITY:
                     prettified_notes[j] = None
+
 
             prettified_notes = [note for note in prettified_notes if note is not None]
             midi.instruments[i].notes = prettified_notes
 
         return midi
+
+    @classmethod
+    def __split_midi(cls, midi : pretty_midi.PrettyMIDI, save_dir : Path, midi_name : str) -> None:
+        """
+        Разделить MIDI-файл на несколько партий
+        :param midi: Объект открытого MIDI-файла.
+        :param save_dir: Папка для сохранения файлов.
+        :param midi_name: Наименование разделяемого MIDI-файла.
+        :return: None.
+        """
+        # Считываем ноты
+        notes = []
+
+        for instruments in midi.instruments:
+            for note in instruments.notes:
+                notes.append(note)
+
+        # Выбор центральной опорной ноты для разделения трека на две партии
+        max_pitch_note = max(notes, key=lambda note: note.pitch)
+        min_pitch_note = min(notes, key=lambda note: note.pitch)
+        pivot_note_pitch = (max_pitch_note.pitch + min_pitch_note.pitch) / 2
+
+        low_octave_notes = []
+        high_octave_notes = []
+
+        for note in notes:
+            if note.pitch >= pivot_note_pitch:
+                high_octave_notes.append(note)
+            else:
+                low_octave_notes.append(note)
+
+        # Сохранение первой партии
+        file1 = pretty_midi.PrettyMIDI()
+        instrument = pretty_midi.Instrument(
+            program=0,
+            name="Low_octave_part",
+        )
+        instrument.notes.extend(low_octave_notes)
+        file1.instruments.append(instrument)
+        file1.write(save_dir / (f"{midi_name}_1" + config.EXTENSIONS.mid))
+
+        # Сохранение второй партии
+        file2 = pretty_midi.PrettyMIDI()
+        instrument = pretty_midi.Instrument(
+            program=0,
+            name="High_octave_part",
+        )
+        instrument.notes.extend(high_octave_notes)
+        file2.instruments.append(instrument)
+        file2.write(save_dir / (f"{midi_name}_2" + config.EXTENSIONS.mid))
 
 
     @classmethod
