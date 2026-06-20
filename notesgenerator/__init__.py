@@ -1,8 +1,11 @@
-from notesgenerator.lib import (
-    NotesGenerator,
-    MidiFile,
-    TabDrawer,
-    MidiConverter,
-    BPMMap,
-    assert_filename
-)
+from asserters import assert_filename
+from bpm import *
+from constants import *
+from constants import *
+from midi import *
+from midiconverter import *
+from note import *
+from notesgenerator import *
+from tabdrawer import *
+from web import *
+from notesgenerator.notesgenerator import *

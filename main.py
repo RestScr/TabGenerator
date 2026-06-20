@@ -13,11 +13,10 @@ from notesgenerator import (
     TabDrawer,
     MidiConverter,
     BPMMap,
-    assert_filename
+    assert_filename,
+    BeatMap
 )
 import torch
-
-from notesgenerator.lib import BeatMap
 from notesgenerator.web import post_json, check_url
 from http import HTTPStatus
 
