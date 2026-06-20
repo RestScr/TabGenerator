@@ -1,5 +1,3 @@
-from torchgen.api.cpp import return_names
-
 import config
 import pretty_midi
 from pathlib import Path
@@ -10,176 +8,41 @@ from basic_pitch.inference import predict_and_save
 from basic_pitch import ICASSP_2022_MODEL_PATH
 
 
-class MidiFile:
+class Beats:
     """
-    Структура для хранения информации о сгенерированном MIDI-файле
+    Статическая структура, хранящая константы тактов
     """
-    def __init__(self, instrument_type : str, midi_filename : Path):
-        self.instrument_type = instrument_type
-        self.midi_filename = midi_filename
+    ONE_SECOND = 1 # Одна вторая доля
+    ONE_FOURTH = 1/2 # четвертная доля
+    ONE_EIGHTH = 1/4 # Восьмая доля
+    ONE_SIXTEENTH = 1/8 # Шестнадцатая доля
+    ONE_THIRTY_SECOND = 1/16 # тридцать вторая доля
 
 
-class NotesGenerator:
+class Note:
     """
-    Синглтон-фабрика генерации нот для табулатур.
+    Базовый класс всех нот музыкальных
+    инструментов.
     """
-    _instance = None
-    GUITAR_STRINGS_PITCH = [40, 45, 50, 55, 59, 64]
-    MAX_FRET_DISTANCE = 4 # Максимальная дистанция, от которой может
-                          # задаваться следующая позиция на грифе
-    MIN_VELOCITY = 50 # Минимальная громкость, ниже которой
-                      # ноты пропускаются
-
-    def __new__(cls):
-        if cls._instance is not None:
-            raise RuntimeError("This class is a singleton")
-        return super().__new__(cls)
+    def __init__(self, start):
+        self.start = start
 
 
-    @classmethod
-    def get_instance(cls):
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls.__init__(cls._instance)
-        return cls._instance
-
-
-    # Фабричный метод
-    @classmethod
-    def create_notes(cls, midi_file : MidiFile):
-        if midi_file.instrument_type == config.AVAILABLE_INSTRUMENTS_FOR_TABS.lead_guitar:
-            return cls.create_guitar_notes(midi_file.midi_filename)
-        elif midi_file.instrument_type == config.AVAILABLE_INSTRUMENTS_FOR_TABS.lead_guitar:
-            return cls.create_guitar_notes(midi_file.midi_filename)
-        else:
-            return None
-
-
-    @classmethod
-    def create_guitar_notes(cls, midi_filename : Path):
-        """
-        Фабричный метод для генерации гитарных нот для отображения на табулатуре
-        :param midi_filename: Путь к MIDI-файлу
-        :return: Упорядоченный список нот.
-        """
-        midi = pretty_midi.PrettyMIDI(str(midi_filename))
-
-        notes = []
-
-        for instrument in midi.instruments:
-            # Отсеиваем глухие ноты
-            instrument.notes = [
-                note
-                for note in instrument.notes
-                if note.velocity >= cls.MIN_VELOCITY
-            ]
-            for note in instrument.notes:
-                pitch = note.pitch # тональность ноты
-
-                possible_positions = [] # Массив возможных позиций на грифе
-                for i, open_note in enumerate(cls.GUITAR_STRINGS_PITCH):
-                    # i - номер струны
-                    # fret - лад
-                    # open_note - тональность открытой струны
-                    fret = pitch - open_note
-                    if 0 <= fret <= 20:
-                        # Добавляем кортеж в массив с номером лада и струны
-                        possible_positions.append((fret, i))
-
-                # ВРЕМЕННО
-                # Если нет позиций, то переходим к следующей ноте
-                if len(possible_positions) == 0:
-                    continue
-
-                # Выбор наилучшей позиции ноты (чем ближе
-                # к предыдущей позиции по ладу, тем лучше)
-                if len(notes) > 0:
-                    best_position = min(
-                        possible_positions,
-                        key=lambda x: abs(notes[-1][2] - x[0])
-                    )
-                else:
-                    best_position = min(
-                        possible_positions,
-                        key=lambda x: abs(x[0])
-                    )
-
-                best_fret = best_position[0]
-                best_string = best_position[1]
-
-                if best_string is not None:
-                    # Складываем в массив нот полученную ноту
-                    notes.append((note.start, best_string, best_fret))
-
-        notes.sort(key=lambda x: x[0])
-
-        return notes
-
-
-class TabDrawer:
+class GuitarNote(Note):
     """
-    Тестовый класс-синглтон для
-    генерации текстовых табулатур
+    Класс гитарной ноты, хранящий
+    информацию о проигрываемой струне и ладе.
     """
-    _instance = None
-    STRING_NAMES = ["e", "B", "G", "D", "A", "E"]
+    def __init__(self, start, string, fret):
+        super().__init__(start)
+        self.string = string
+        self.fret = fret
 
-    def __new__(cls):
-        if cls._instance is not None:
-            raise RuntimeError("This class is a singleton")
-        return super().__new__(cls)
+    def __iter__(self):
+        return iter([self.start, self.string, self.fret])
 
-    @classmethod
-    def get_instance(cls):
-        """
-        Получение экземпляра синглтона
-        :return: Ссылка на экземпляр.
-        """
-        if cls._instance is None:
-            cls._instance = super().__new__(cls)
-            cls.__init__(cls._instance)
-        return cls._instance
-
-
-    @classmethod
-    def create_tab(cls, instrument_type : str, notes : list) -> str:
-        """
-        Фабричный метод генерации табов по заданному типу инструмента
-        :param instrument_type:
-        :param notes:
-        :return:
-        """
-        if instrument_type == config.AVAILABLE_INSTRUMENTS_FOR_TABS.lead_guitar:
-            return cls.create_guitar_notes(notes)
-        if instrument_type == config.AVAILABLE_INSTRUMENTS_FOR_TABS.rhythm_guitar:
-            return cls.create_guitar_notes(notes)
-        else:
-            return ""
-
-
-    @classmethod
-    def create_guitar_notes(cls, notes : list):
-        """
-        Генерация текстовых табулатур для гитары.
-        :param notes: Гитарные ноты
-        :return: Текстовые табулатуры.
-        """
-        if notes is None:
-            return ""
-
-        length = min(len(notes), 80)
-
-        tab = [["-" for _ in range(length)] for _ in range(6)]
-
-        for i, (_, string, fret) in enumerate(notes[:length]):
-            tab[5 - string][i] = str(fret)
-
-        # render
-        out = []
-        for i in range(6):
-            out.append(cls.STRING_NAMES[i] + "| " + "-".join(tab[i]))
-
-        return "\n".join(out)
+    def to_dict(self):
+        return {"start" : self.start, "string" : self.string, "fret" : self.fret}
 
 
 class BPMPart:
@@ -188,12 +51,67 @@ class BPMPart:
     начало участка (сек), конец участка (сек), темп.
     """
     def __init__(self, start : float, end : float, tempo : int):
+        assert tempo > 0
         self.start = start
         self.end = end
         self.tempo = tempo
 
     def __iter__(self):
         return iter([self.start, self.end, self.tempo])
+
+    def to_dict(self):
+        return {
+            "start" : self.start,
+            "end" : self.end,
+            "tempo" : self.tempo}
+
+    def get_beats(self, beat_size : float) -> list:
+        """
+        Функция разделения участка песни
+        на фрагменты по заданному темпу.
+        :param beat_size: Доля такта.
+        :return:
+        """
+        output = []
+        step = 60 / self.tempo * beat_size
+        for i in range(math.ceil((self.end - self.start) / step)):
+            new_beat = Beat(self.start + i * step, self.start + (i + 1) * step)
+            output.append(new_beat)
+
+        return output
+
+
+class Beat:
+    """
+    Класс удара в такте.
+    """
+    def __init__(self, start : float, end : float, notes : list=None):
+        if notes is None:
+            notes = list()
+
+        self.start = start
+        self.end = end
+        self.notes = notes
+
+    def __iter__(self):
+        return iter([self.start, self.end, self.notes])
+
+    def to_dict(self):
+        return {
+            "start" : self.start,
+            "end" : self.end,
+            "notes" : [note.to_dict() for note in self.notes]}
+
+
+class BeatMap:
+    """
+    Класс, хранящий разделение песни по тактам.
+    """
+    def __init__(self, beatmap : list[Beat]):
+        self.beatmap = beatmap
+
+    def __iter__(self):
+        return iter([beat.to_dict() for beat in self.beatmap])
 
 
 class BPMMap:
@@ -203,7 +121,10 @@ class BPMMap:
     """
     WINDOW_SIZE = 5 # Размер тактового окна при получении карты
                      # темпов в секундах
-    def __init__(self, filename : Path):
+    def __init__(self, filename : Path, beat_size=None):
+        if beat_size is None:
+            beat_size = Beats.ONE_FOURTH
+        self.beat_size = beat_size
         self.bpm_map = None
         self.rate_local(filename)
 
@@ -241,7 +162,6 @@ class BPMMap:
 
         self.bpm_map = bpm_map
 
-
     def rate(self, filename : Path):
         """
         Функция получения общего темпа песни.
@@ -260,8 +180,211 @@ class BPMMap:
 
         self.bpm_map = [BPMPart(0, len(y) / sample_rate, math.ceil(global_tempo[0]))]
 
+    def get_beats(self) -> BeatMap:
+        """
+        Функция разделения всей карты BPM
+        на такты.
+        :return: Массив тактов.
+        """
+        output = BeatMap([])
+        for part in self.bpm_map:
+            output.beatmap.extend(part.get_beats(self.beat_size))
+
+        return output
+
     def __iter__(self):
-        return iter([tuple(part) for part in self.bpm_map])
+        return iter([part.to_dict() for part in self.bpm_map])
+
+
+class MidiFile:
+    """
+    Структура для хранения информации о сгенерированном MIDI-файле
+    """
+    def __init__(self, instrument_type : str, midi_filename : Path):
+        self.instrument_type = instrument_type
+        self.midi_filename = midi_filename
+
+
+class NotesGenerator:
+    """
+    Синглтон-фабрика генерации нот для табулатур.
+    """
+    _instance = None
+    GUITAR_STRINGS_PITCH = [40, 45, 50, 55, 59, 64]
+    MAX_FRET_DISTANCE = 4 # Максимальная дистанция, от которой может
+                          # задаваться следующая позиция на грифе
+    MIN_VELOCITY = 50 # Минимальная громкость, ниже которой
+                      # ноты пропускаются
+
+    def __new__(cls):
+        if cls._instance is not None:
+            raise RuntimeError("This class is a singleton")
+        return super().__new__(cls)
+
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls.__init__(cls._instance)
+        return cls._instance
+
+    # Фабричный метод
+    @classmethod
+    def create_notes(cls, midi_file : MidiFile, bpm_map : BPMMap) -> BeatMap | None:
+        if midi_file.instrument_type == config.AVAILABLE_INSTRUMENTS_FOR_TABS.lead_guitar:
+            return cls.__create_guitar_notes(midi_file.midi_filename, bpm_map)
+        elif midi_file.instrument_type == config.AVAILABLE_INSTRUMENTS_FOR_TABS.lead_guitar:
+            return cls.__create_guitar_notes(midi_file.midi_filename, bpm_map)
+        else:
+            return None
+
+    @classmethod
+    def __create_guitar_notes(cls, midi_filename : Path, bpm_map : BPMMap) -> BeatMap:
+        """
+        Фабричный метод для генерации гитарных нот для отображения на табулатуре
+        :param midi_filename: Путь к MIDI-файлу
+        :param bpm_map: Карта BPM аудиофайла.
+        :return: Упорядоченный список нот.
+        """
+        midi = pretty_midi.PrettyMIDI(str(midi_filename))
+
+        notes = []
+
+        for instrument in midi.instruments:
+            # Отсеиваем глухие ноты
+            instrument.notes = [
+                note
+                for note in instrument.notes
+                if note.velocity >= cls.MIN_VELOCITY
+            ]
+            for note in instrument.notes:
+                pitch = note.pitch # тональность ноты
+
+                possible_positions = [] # Массив возможных позиций на грифе
+                for i, open_note in enumerate(cls.GUITAR_STRINGS_PITCH):
+                    # i - номер струны
+                    # fret - лад
+                    # open_note - тональность открытой струны
+                    fret = pitch - open_note
+                    if 0 <= fret <= 20:
+                        # Добавляем кортеж в массив с номером лада и струны
+                        possible_positions.append((fret, i))
+
+                # ВРЕМЕННО
+                # Если нет позиций, то переходим к следующей ноте
+                if len(possible_positions) == 0:
+                    continue
+
+                # Выбор наилучшей позиции ноты (чем ближе
+                # к предыдущей позиции по ладу, тем лучше)
+                if len(notes) > 0:
+                    best_position = min(
+                        possible_positions,
+                        key=lambda x: abs(notes[-1].fret - x[0])
+                    )
+                else:
+                    best_position = min(
+                        possible_positions,
+                        key=lambda x: abs(x[0])
+                    )
+
+                best_fret = best_position[0]
+                best_string = best_position[1]
+
+                if best_string is not None:
+                    # Складываем в массив нот полученную ноту
+                    notes.append(GuitarNote(note.start, best_string, best_fret))
+
+        notes.sort(key=lambda x: x.start)
+
+        return NotesGenerator.__split_notes(notes, bpm_map)
+
+    @staticmethod
+    def __split_notes(notes : list, bpm_map : BPMMap) -> BeatMap:
+        """
+        Функция, которая разделяет полученные ноты на позиции
+        ао заданной карте темпов.
+        :param notes: Чистые нераспределенные ноты.
+        :param bpm_map: BPM карта.
+        :return: Список с долями с нотами в каждой доле.
+        """
+        total_map = iter(bpm_map.get_beats().beatmap)
+        beat = next(total_map)
+        result = BeatMap([])
+        for note in notes:
+            if note.start > beat.end:
+                result.beatmap.append(beat)
+                beat = next(total_map)
+            beat.notes.append(note)
+
+        result.beatmap.append(beat)
+
+        return result
+
+
+class TabDrawer:
+    """
+    Тестовый класс-синглтон для
+    генерации текстовых табулатур
+    """
+    _instance = None
+    STRING_NAMES = ["e", "B", "G", "D", "A", "E"]
+
+    def __new__(cls):
+        if cls._instance is not None:
+            raise RuntimeError("This class is a singleton")
+        return super().__new__(cls)
+
+    @classmethod
+    def get_instance(cls):
+        """
+        Получение экземпляра синглтона
+        :return: Ссылка на экземпляр.
+        """
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+            cls.__init__(cls._instance)
+        return cls._instance
+
+    @classmethod
+    def create_tab(cls, instrument_type : str, notes : BeatMap) -> str:
+        """
+        Фабричный метод генерации табов по заданному типу инструмента
+        :param instrument_type:
+        :param notes:
+        :return:
+        """
+        if instrument_type == config.AVAILABLE_INSTRUMENTS_FOR_TABS.lead_guitar:
+            return cls.__create_guitar_notes(notes)
+        if instrument_type == config.AVAILABLE_INSTRUMENTS_FOR_TABS.rhythm_guitar:
+            return cls.__create_guitar_notes(notes)
+        else:
+            return ""
+
+    @classmethod
+    def __create_guitar_notes(cls, beatmap : BeatMap) -> str:
+        """
+        Генерация текстовых табулатур для гитары.
+        :param beatmap: Гитарные ноты
+        :return: Текстовые табулатуры.
+        """
+        if beatmap is None:
+            return ""
+
+        length = len(beatmap.beatmap)
+
+        tab = [["-" for _ in range(length)] for _ in range(6)]
+
+        for i, beat in enumerate(beatmap.beatmap):
+            for note in beat.notes:
+                tab[5 - note.string][i] = str(note.fret)
+
+        # render
+        out = []
+        for i in range(6):
+            out.append(cls.STRING_NAMES[i] + "| " + "-".join(tab[i]))
+
+        return "\n".join(out)
 
 
 class MidiConverter:

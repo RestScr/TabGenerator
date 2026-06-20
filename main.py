@@ -16,6 +16,8 @@ from notesgenerator import (
     assert_filename
 )
 import torch
+
+from notesgenerator.lib import BeatMap
 from notesgenerator.web import post_json, check_url
 from http import HTTPStatus
 
@@ -158,10 +160,16 @@ def main():
 
     print("Creating tab notes...")
     for midi_file in midi_files:
+        notes = NotesGenerator.create_notes(midi_file, bpm_map)
+
         generated_notes["instrument_notes"].setdefault(
             midi_file.instrument_type,
-            NotesGenerator.create_notes(midi_file)
+            list(notes) if notes is not None else None
         )
+
+        # Отладка табов.
+        if config.DEBUG:
+            save_tab_into_file(notes, filename.stem, midi_file.instrument_type)
 
     print("Dumping notes into json...")
     dump_notes_into_json(generated_notes, filename.stem)
@@ -173,11 +181,6 @@ def main():
             print("Success!")
         else:
             print("Failed. Status code:", result)
-
-    # Для отладки.
-    if config.DEBUG:
-        print("Rendering and saving tabs...")
-        save_tabs_into_files(generated_notes["instrument_notes"], filename.stem)
 
     # Удаление временной директории
     print("Removing separated directory")
@@ -196,9 +199,19 @@ def save_tabs_into_files(generated_notes : dict, song_name : str):
 
     for instrument_type, instrument_notes in generated_notes.items():
         save_path = save_dir_path / (instrument_type + config.EXTENSIONS.txt)
-        tabs = TabDrawer.create_tab(instrument_type, instrument_notes)
+        tab = TabDrawer.create_tab(instrument_type, instrument_notes)
         with open(save_path, "w") as file:
-            file.write(tabs)
+            file.write(tab)
+
+
+def save_tab_into_file(generated_notes : BeatMap, song_name : str, instrument_type : str):
+    save_dir_path = config.DEBUG_TABS_SAVE_DIR_PATH / song_name
+    save_dir_path.mkdir(exist_ok=True, parents=True)
+
+    save_path = save_dir_path / (instrument_type + config.EXTENSIONS.txt)
+    tabs = TabDrawer.create_tab(instrument_type, generated_notes)
+    with open(save_path, "w") as file:
+        file.write(tabs)
 
 
 def dump_notes_into_json(notes : dict, song_name : str):
