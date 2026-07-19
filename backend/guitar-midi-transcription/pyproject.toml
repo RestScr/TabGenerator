@@ -1,0 +1,39 @@
+[project]
+name = "hf-midi-transcription"
+version = "0.1.1"
+description = "Multi-instrument transcription model for converting audio to MIDI using neural networks"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "torch>=1.9.0",
+    "librosa>=0.9.0",
+    "huggingface-hub>=0.16.0",
+    "numpy>=1.21.0",
+    "safetensors>=0.3.0",
+    "piano-transcription-inference @ git+https://github.com/xavriley/piano_transcription_inference.git",
+]
+authors = [
+    {name = "Xavier Riley", email = "your-email@example.com"},
+]
+keywords = ["audio", "midi", "transcription", "multi-instrument", "saxophone", "bass", "guitar", "piano", "music", "ai"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Multimedia :: Sound/Audio :: Analysis",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.urls]
+Homepage = "https://github.com/xavriley/hf_midi_transcription"
+Repository = "https://github.com/xavriley/hf_midi_transcription.git"
+Issues = "https://github.com/xavriley/hf_midi_transcription/issues"
+
+[project.scripts]
+midi_transcription = "hf_midi_transcription.cli:main"
+

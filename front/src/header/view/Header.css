@@ -1,0 +1,236 @@
+.app-header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: grid;
+  grid-template-columns: 250px minmax(280px, 590px) 1fr auto;
+  min-height: 92px;
+  align-items: center;
+  gap: 34px;
+  padding: 0 40px;
+  border-bottom: 1px solid var(--color-border);
+  background: var(--color-header-overlay);
+  backdrop-filter: blur(18px);
+}
+
+.brand,
+.top-nav,
+.user-menu,
+.top-nav a,
+.top-nav button {
+  display: flex;
+  align-items: center;
+}
+
+.brand {
+  gap: 14px;
+  min-width: 250px;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+}
+
+.brand-mark {
+  display: grid;
+  width: 58px;
+  height: 42px;
+  place-items: center;
+  border: 1px solid var(--color-primary-border);
+  border-radius: 999px;
+  color: var(--color-text);
+  background:
+    linear-gradient(145deg, var(--color-white-overlay-strong), transparent 34%),
+    linear-gradient(135deg, var(--color-primary-hover), var(--color-primary-strong));
+  box-shadow: var(--shadow-primary);
+  font-size: 23px;
+}
+
+.brand-name {
+  color: var(--color-text);
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.header-search-wrap {
+  min-width: 0;
+  opacity: 0;
+  transform: translateY(-8px) scaleX(0.94);
+  transform-origin: left center;
+  transition:
+    opacity 220ms ease,
+    transform 260ms ease,
+    visibility 220ms ease;
+  visibility: hidden;
+}
+
+.header-search-wrap.is-visible {
+  opacity: 1;
+  transform: translateY(0) scaleX(1);
+  visibility: visible;
+}
+
+.header-search {
+  display: flex;
+  height: 58px;
+  align-items: center;
+  gap: 16px;
+  padding: 0 14px 0 22px;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 14px;
+  background: var(--color-input);
+  box-shadow: var(--shadow-header-search);
+}
+
+.header-search input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  color: var(--color-text);
+  background: transparent;
+  font-size: 18px;
+}
+
+.header-search input::placeholder {
+  color: var(--color-muted);
+}
+
+.header-search kbd {
+  padding: 7px 10px;
+  border-radius: 8px;
+  color: var(--color-muted);
+  background: var(--color-white-overlay);
+  font: inherit;
+}
+
+.header-search-icon {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  flex: 0 0 auto;
+  border: 2px solid var(--color-muted);
+  border-radius: 50%;
+}
+
+.header-search-icon::after {
+  content: '';
+  position: absolute;
+  right: -10px;
+  bottom: -7px;
+  width: 13px;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--color-muted);
+  transform: rotate(45deg);
+}
+
+.brand-name span {
+  color: var(--color-primary-hover);
+}
+
+.top-nav {
+  justify-content: flex-end;
+  gap: 48px;
+  color: var(--color-muted);
+  font-weight: 700;
+}
+
+.top-nav-action {
+  gap: 12px;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font-weight: inherit;
+}
+
+.top-nav a {
+  gap: 12px;
+  transition: color 160ms ease;
+}
+
+.top-nav-action { transition: color 160ms ease; }
+
+.top-nav a:hover,
+.top-nav-action:hover,
+.user-menu:hover {
+  color: var(--color-text);
+}
+
+.nav-icon {
+  display: inline-grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  color: var(--color-muted);
+  font-size: 20px;
+}
+
+.nav-icon.solid {
+  border-radius: 5px;
+  background: var(--color-muted);
+}
+
+.user-menu {
+  min-width: 180px;
+  justify-content: flex-end;
+  gap: 14px;
+  border: 0;
+  color: var(--color-muted);
+  background: transparent;
+  font-weight: 700;
+}
+
+.avatar {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--color-text);
+  background: linear-gradient(135deg, var(--color-primary-hover), var(--color-primary-strong));
+  font-size: 20px;
+}
+
+.chevron {
+  width: 10px;
+  height: 10px;
+  border-right: 3px solid var(--color-muted);
+  border-bottom: 3px solid var(--color-muted);
+  transform: rotate(45deg) translateY(-2px);
+  transform-origin: center;
+}
+
+@media (max-width: 1100px) {
+  .app-header {
+    grid-template-columns: 220px minmax(240px, 1fr) auto;
+    padding: 0 20px;
+  }
+
+  .top-nav {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
+  .app-header {
+    grid-template-columns: 1fr;
+    min-height: auto;
+    gap: 16px;
+    padding: 16px;
+  }
+
+  .brand,
+  .user-menu {
+    min-width: 0;
+  }
+
+  .brand-name {
+    font-size: 23px;
+  }
+
+  .user-name {
+    display: none;
+  }
+}
