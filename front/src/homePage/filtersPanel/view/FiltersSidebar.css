@@ -1,0 +1,197 @@
+.sidebar {
+  --sidebar-title-size: clamp(15px, 1.52vh, 18px);
+  --sidebar-label-size: clamp(12px, 1.18vh, 15px);
+  --sidebar-body-size: clamp(13px, 1.28vh, 16px);
+  --sidebar-icon-size: clamp(22px, 2.36vh, 28px);
+  --sidebar-link-icon-size: clamp(24px, 2.57vh, 32px);
+  --sidebar-control-height: clamp(34px, 3.52vh, 42px);
+  --sidebar-field-gap: clamp(8px, 0.82vh, 13px);
+  --sidebar-section-gap: clamp(14px, 1.63vh, 26px);
+  --sidebar-plus-icon: clamp(34px, 3.73vh, 44px);
+
+  position: sticky;
+  top: 114px;
+  align-self: start;
+  padding: clamp(13px, 1.58vh, 21px) clamp(13px, 1.05vw, 17px) clamp(12px, 1.42vh, 19px);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, var(--color-white-overlay-faint), transparent),
+    var(--color-sidebar);
+  box-shadow: var(--shadow-card);
+}
+
+.sidebar h2 {
+  margin: 0 0 clamp(8px, 0.82vh, 11px);
+  color: var(--color-primary-hover);
+  font-size: var(--sidebar-title-size);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.filter-list {
+  display: grid;
+  gap: var(--sidebar-field-gap);
+}
+
+.filter-field {
+  display: grid;
+  grid-template-columns: clamp(22px, 2.36vh, 27px) minmax(0, 1fr);
+  column-gap: clamp(9px, 0.84vw, 11px);
+  align-items: end;
+  position: relative;
+}
+
+.filter-meta {
+  display: contents;
+  color: var(--color-muted);
+  font-size: var(--sidebar-label-size);
+}
+
+.filter-icon {
+  grid-row: span 2;
+  align-self: center;
+  color: var(--color-primary-hover);
+  font-size: var(--sidebar-icon-size);
+  line-height: 1;
+  text-align: center;
+}
+
+.select-control {
+  display: flex;
+  width: 100%;
+  appearance: none;
+  height: var(--sidebar-control-height);
+  align-items: center;
+  justify-content: space-between;
+  gap: clamp(10px, 0.9vw, 13px);
+  margin-top: clamp(4px, 0.48vh, 6px);
+  padding: 0 clamp(11px, 0.95vw, 14px);
+  border: 1px solid transparent;
+  border-radius: 7px;
+  color: var(--color-text-soft);
+  background: var(--color-control);
+  font-size: var(--sidebar-body-size);
+  text-align: left;
+}
+
+.filter-field::after {
+  position: absolute;
+  right: clamp(11px, 0.95vw, 14px);
+  bottom: clamp(13px, 1.28vh, 17px);
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--color-text-soft);
+  border-bottom: 2px solid var(--color-text-soft);
+  content: '';
+  pointer-events: none;
+  transform: rotate(45deg);
+}
+
+.select-control:hover {
+  border-color: var(--color-primary-border);
+  background: var(--color-control-hover);
+}
+
+.side-links {
+  display: grid;
+  gap: clamp(12px, 1.52vh, 19px);
+  margin: var(--sidebar-section-gap) 0;
+}
+
+.side-links a {
+  display: flex;
+  align-items: center;
+  gap: clamp(14px, 1.26vw, 19px);
+  color: var(--color-muted);
+  font-size: var(--sidebar-body-size);
+  transition: color 160ms ease;
+}
+
+.side-links a:hover {
+  color: var(--color-text);
+}
+
+.side-links a.active {
+  color: var(--color-text);
+}
+
+.side-links span {
+  width: clamp(22px, 2.36vh, 25px);
+  color: var(--color-primary-hover);
+  font-size: var(--sidebar-link-icon-size);
+  line-height: 1;
+  text-align: center;
+}
+
+.plus-card {
+  padding: clamp(8px, 0.9vh, 11px);
+  border: 1px solid var(--color-primary-border);
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--color-primary-overlay), var(--color-primary-faint));
+}
+
+.plus-row {
+  display: flex;
+  align-items: center;
+  gap: clamp(9px, 0.84vw, 11px);
+  color: var(--color-text);
+  font-size: var(--sidebar-body-size);
+}
+
+.plus-icon {
+  display: grid;
+  width: var(--sidebar-plus-icon);
+  height: var(--sidebar-plus-icon);
+  place-items: center;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--color-primary-hover), var(--color-primary-strong));
+  font-size: clamp(21px, 2.42vh, 29px);
+}
+
+.plus-card p {
+  margin: clamp(5px, 0.58vh, 7px) 0 clamp(9px, 1.1vh, 15px);
+  color: var(--color-muted);
+  font-size: var(--sidebar-label-size);
+}
+
+.plus-card button {
+  width: 100%;
+  min-height: clamp(32px, 3.25vh, 39px);
+  border: 0;
+  border-radius: 6px;
+  color: var(--color-text);
+  background: linear-gradient(135deg, var(--color-primary-hover), var(--color-primary-strong));
+  font-size: var(--sidebar-label-size);
+  font-weight: 800;
+  box-shadow: var(--shadow-primary);
+}
+
+.plus-card button:hover {
+  background: linear-gradient(135deg, var(--color-primary-hover), var(--color-primary));
+}
+
+@media (max-width: 1100px) {
+  .sidebar {
+    position: static;
+    max-height: none;
+    overflow: visible;
+    min-height: auto;
+  }
+
+  .filter-list {
+    grid-template-columns: repeat(2, minmax(220px, 1fr));
+  }
+
+  .side-links {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .filter-list,
+  .side-links {
+    grid-template-columns: 1fr;
+  }
+}

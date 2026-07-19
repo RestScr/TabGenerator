@@ -1,0 +1,8 @@
+# Runtime used by the isolated audio-preparation subprocess.
+demucs
+librosa
+soundfile
+torch
+numpy
+pretty_midi
+-e ./guitar-midi-transcription

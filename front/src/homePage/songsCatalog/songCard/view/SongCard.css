@@ -1,0 +1,202 @@
+.tab-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr) 70px 160px 52px;
+  align-items: center;
+  gap: 24px;
+  min-height: 106px;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background:
+    linear-gradient(180deg, var(--color-white-overlay-subtle), transparent),
+    var(--color-card);
+}
+
+.tab-card:hover {
+  border-color: var(--color-border-strong);
+  background: var(--color-card-hover);
+}
+
+.featured-star {
+  position: absolute;
+  top: 8px;
+  left: 7px;
+  z-index: 1;
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--color-text);
+  background: var(--color-primary);
+  font-size: 12px;
+}
+
+.badge-art {
+  display: grid;
+  width: 80px;
+  height: 80px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 6px;
+  background: var(--color-art-base);
+}
+
+.badge-art.mist {
+  background: linear-gradient(135deg, var(--color-art-mist-start), var(--color-art-mist-end));
+}
+
+.badge-art.dark {
+  background: var(--color-art-dark);
+}
+
+.badge-art.warm {
+  background: var(--color-art-warm);
+}
+
+.badge-art.wine {
+  background: var(--color-art-wine);
+}
+
+.badge-text {
+  white-space: pre-line;
+  color: var(--color-text);
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.line-angle,
+.line-slash {
+  width: 52px;
+  height: 52px;
+  border-top: 5px solid var(--color-muted);
+  border-right: 5px solid var(--color-muted);
+  transform: rotate(28deg);
+}
+
+.line-slash {
+  width: 45px;
+  height: 58px;
+  transform: rotate(22deg);
+}
+
+.circle-art {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: linear-gradient(var(--color-art-circle-light) 0 49%, var(--color-art-circle-line) 50% 53%, var(--color-art-circle-dark) 54%);
+}
+
+.mark-art {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background:
+    linear-gradient(45deg, transparent 44%, var(--color-art-mark-line) 45% 49%, transparent 50%),
+    var(--color-art-mark);
+}
+
+.tab-info {
+  min-width: 0;
+}
+
+.tab-info h3 {
+  overflow: hidden;
+  margin: 0 0 4px;
+  color: var(--color-text);
+  font-size: 21px;
+  line-height: 1.15;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-info p,
+.tab-meta,
+.rating span {
+  color: var(--color-muted);
+}
+
+.tab-info p {
+  font-size: 16px;
+}
+
+.tab-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 22px;
+  margin-top: 8px;
+  font-size: 14px;
+}
+
+.rating {
+  display: grid;
+  gap: 3px;
+  color: var(--color-text);
+}
+
+.rating strong {
+  font-size: 17px;
+}
+
+.open-tab {
+  min-height: 42px;
+  border: 0;
+  border-radius: 6px;
+  color: var(--color-text);
+  background: linear-gradient(135deg, var(--color-primary-hover), var(--color-primary-strong));
+  font-size: 16px;
+  font-weight: 800;
+  box-shadow: var(--shadow-primary);
+}
+
+.open-tab:hover {
+  background: linear-gradient(135deg, var(--color-primary-hover), var(--color-primary));
+}
+
+.favorite {
+  border: 0;
+  color: var(--color-muted);
+  background: transparent;
+  font-size: 42px;
+  line-height: 1;
+}
+
+.favorite:hover {
+  color: var(--color-text);
+}
+
+.favorite.active {
+  color: var(--color-primary-hover);
+}
+
+@media (max-width: 760px) {
+  .tab-card {
+    grid-template-columns: 64px minmax(0, 1fr) 52px;
+    gap: 14px;
+    min-height: auto;
+  }
+
+  .badge-art {
+    width: 64px;
+    height: 64px;
+  }
+
+  .rating {
+    justify-items: end;
+  }
+
+  .open-tab {
+    grid-column: 2 / 4;
+    width: 100%;
+  }
+
+  .favorite {
+    position: absolute;
+    right: 14px;
+    bottom: 58px;
+    font-size: 32px;
+  }
+}

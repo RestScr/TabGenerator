@@ -1,0 +1,23 @@
+.tab-view-shell {
+  min-height: 100vh;
+  overflow-x: clip;
+  background:
+    radial-gradient(circle at 77% 28%, var(--color-primary-overlay), transparent 23%),
+    radial-gradient(circle at 50% 80%, var(--color-blue-overlay), transparent 35%),
+    linear-gradient(135deg, var(--color-page) 0%, var(--color-page-mid) 58%, var(--color-tab-page-deep) 100%);
+}
+
+.tab-view-main {
+  min-height: calc(100vh - 100px);
+}
+
+.tab-view-state {
+  display: grid;
+  min-height: calc(100vh - 100px);
+  align-content: center;
+  gap: 10px;
+  padding: 40px;
+}
+
+.tab-view-state h1 { margin: 0; font-size: 32px; }
+.tab-view-state p { color: var(--color-muted); }

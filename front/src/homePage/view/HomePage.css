@@ -1,0 +1,42 @@
+.app-shell {
+  position: relative;
+  min-height: 100vh;
+  overflow-x: clip;
+  background:
+    radial-gradient(circle at 15% 92%, var(--color-deep-glow), transparent 22%),
+    linear-gradient(135deg, var(--color-page) 0%, var(--color-page-mid) 55%, var(--color-page-deep) 100%);
+}
+
+.home-layout {
+  display: grid;
+  grid-template-columns: 20vw minmax(0, 1fr);
+  gap: clamp(19px, 1.6vw, 23px);
+  width: 100%;
+  margin: 0;
+  padding: 22px;
+}
+
+.content-area {
+  position: relative;
+  min-width: 0;
+  padding: 0 0 40px;
+}
+
+.ambient-circle {
+  position: absolute;
+  top: -110px;
+  left: 35%;
+  width: 452px;
+  height: 452px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--color-spotlight), var(--color-spotlight-fade) 68%);
+  pointer-events: none;
+}
+
+@media (max-width: 1100px) {
+  .home-layout {
+    grid-template-columns: 1fr;
+    gap: 22px;
+    padding: 22px;
+  }
+}

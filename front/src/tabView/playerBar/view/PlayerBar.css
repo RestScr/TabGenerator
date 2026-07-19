@@ -1,0 +1,117 @@
+.player-bar {
+  position: fixed;
+  right: 37px;
+  bottom: 0;
+  left: 37px;
+  z-index: 4;
+  display: grid;
+  min-height: 72px;
+  grid-template-columns: 270px 140px minmax(0, 1fr);
+  align-items: center;
+  gap: 28px;
+  padding: 10px 26px;
+  border: 1px solid var(--color-border-strong);
+  border-bottom: 0;
+  border-radius: 18px 18px 0 0;
+  background: var(--color-surface-overlay);
+  box-shadow: var(--shadow-player);
+}
+
+.transport-controls {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.transport-controls button {
+  border: 0;
+  color: var(--color-text);
+  background: transparent;
+  font-size: 34px;
+}
+
+.transport-controls .play-button {
+  display: grid;
+  width: 64px;
+  height: 64px;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--color-primary-hover), var(--color-primary-strong));
+  font-size: 30px;
+  box-shadow: var(--shadow-primary);
+}
+
+.player-time {
+  color: var(--color-text);
+  font-size: 18px;
+}
+
+.player-options {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.player-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--color-text);
+  font-size: 17px;
+}
+
+.player-option span {
+  color: var(--color-text-soft);
+}
+
+.player-option strong {
+  color: var(--color-primary-hover);
+  font-weight: 500;
+}
+
+.toggle {
+  position: relative;
+  width: 44px;
+  height: 24px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--color-control);
+}
+
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--color-muted);
+}
+
+.toggle.active {
+  background: var(--color-primary);
+}
+
+.toggle.active::after {
+  left: 24px;
+  background: var(--color-text);
+}
+
+@media (max-width: 1000px) {
+  .player-bar {
+    position: sticky;
+    right: auto;
+    bottom: auto;
+    left: auto;
+    grid-template-columns: 1fr;
+    margin: 0 18px;
+  }
+
+  .player-options {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
+}
